@@ -19,10 +19,7 @@ precendenceTable = [[binary "*" Multiply LibExpr.AssocLeft, binary "/" Divide Li
 
 -- treating ints as floats for now
 int :: Parser Expr
-int = integer >>= \x -> return (Float (fromIntegral x))
-
-floating :: Parser Expr
-floating = float >>= \x -> return (Float x)
+int = integer >>= \x -> return (Value $ fromIntegral x)
 
 variable :: Parser Expr
 variable = identifier >>= \x -> return (Var x)
@@ -32,15 +29,14 @@ function = do
     reserved "def"
     func <- identifier
     args <- parens (commaSep identifier)
-    body <- expr
+    body <- braces (semiSep expr)
     return (Function func args body)
 
-extern :: Parser Expr
-extern = do
-    reserved "extern"
-    name <- identifier
-    args <- parens (commaSep identifier)
-    return (Extern name args)
+returnp :: Parser Expr
+returnp = do
+    reserved "return"
+    ex <- expr
+    return (Return ex)
 
 call :: Parser Expr
 call = do
@@ -53,18 +49,16 @@ expr = LibExpr.buildExpressionParser precendenceTable factor
 
 -- order of matching
 factor :: Parser Expr
-factor = try floating
-     <|> try int
-     <|> try extern
+factor = try int
      <|> try function
      <|> try call
+     <|> try returnp
      <|> variable
      <|> parens expr
 
 defn :: Parser Expr
-defn = try extern
-   <|> try function
-   <|> expr
+defn = try function
+   <|> try expr
 
 contents :: Parser a -> Parser a
 contents p = do
@@ -75,9 +69,9 @@ contents p = do
 
 toplevel :: Parser [Expr]
 toplevel = many $ do
-    def <- defn
+    defexpr <- try defn
     reservedOp ";"
-    return def
+    return defexpr
 
 parseExpr :: String -> Either ParseError Expr
 parseExpr s = parse (contents expr) "<stdin>" s

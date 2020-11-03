@@ -1,2 +1,10 @@
 trying
+dist-newstyle
 src/outputdir
+.stack-work
+
+stack.yaml.lock
+cabal.project.local
+CHANGELOG.md
+
+test.tn
